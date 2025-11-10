@@ -5,7 +5,6 @@ import com.iuh.printshop.printshop_be.entity.Order;
 import com.iuh.printshop.printshop_be.entity.OrderItems;
 import com.iuh.printshop.printshop_be.entity.OrderItemsId;
 import com.iuh.printshop.printshop_be.entity.Product;
-import com.iuh.printshop.printshop_be.repository.OrderRepository;
 import com.iuh.printshop.printshop_be.repository.ProductRepository;
 import com.iuh.printshop.printshop_be.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/order")
@@ -22,7 +20,6 @@ import java.util.stream.Collectors;
 public class OrderController {
     private final OrderService orderService;
     private final ProductRepository productRepository;
-    private final OrderRepository orderRepository;
 
     @PostMapping
     public ResponseEntity<Order> createOrder(@RequestBody Order order) {
