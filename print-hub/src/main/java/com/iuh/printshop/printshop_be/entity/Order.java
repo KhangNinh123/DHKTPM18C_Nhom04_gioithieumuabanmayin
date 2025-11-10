@@ -1,62 +1,53 @@
 package com.iuh.printshop.printshop_be.entity;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.time.LocalDate;
-import java.util.Set;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+
 
 @Entity
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "orders")
+@Getter @Setter @Builder
+@NoArgsConstructor @AllArgsConstructor
 public class Order {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @Column(name = "code")
-    private String code;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "full_name")
-    private String fullName;
 
-    @Column(name = "phone")
-    private String phone;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
 
-    @Column(name = "shipping_address")
-    private String shippingAddress;
 
-    @Column(name = "status")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status;
 
-    @Column(name = "payment_method")
-    private String paymentMethod;
 
-    @Column(name = "payment_status")
-    private String paymentStatus;
+    @Column(nullable = false, precision = 16, scale = 2)
+    private BigDecimal total;
 
-    @Column(name = "subtotal")
-    private double subtotal;
 
-    @Column(name = "shipping_fee")
-    private double shippingFee;
+    @Column(length = 64)
+    @Builder.Default
+    private String currency = "VND";
 
-    @Column(name = "total")
-    private double total;
 
-    @Column(name = "created_at")
-    private LocalDate createdAt = LocalDate.now();
+    @Column(length = 255)
+    private String note;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private Set<OrderItems> orderItems;
+
+    public void recalcTotal() {
+        this.total = items.stream()
+                .map(OrderItem::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }
