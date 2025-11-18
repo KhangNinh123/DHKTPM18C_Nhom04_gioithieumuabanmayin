@@ -32,6 +32,16 @@ spring:
           connectiontimeout: 5000
           timeout: 3000
           writetimeout: 5000
+  ai:
+    model:
+      chat: google-genai
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:AIzaSyACM5Cx5Li29VuT1WjgYW3wOJpL954dxrk}
+        chat:
+          options:
+            model: gemini-2.0-flash
+            temperature: 0.5
 
 file:
   upload-dir: ./uploads

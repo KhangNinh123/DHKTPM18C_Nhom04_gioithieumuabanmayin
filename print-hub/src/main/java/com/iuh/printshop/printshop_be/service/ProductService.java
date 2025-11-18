@@ -1,14 +1,22 @@
 package com.iuh.printshop.printshop_be.service;
 
+import com.iuh.printshop.printshop_be.dto.product.ProductPageResponse;
 import com.iuh.printshop.printshop_be.dto.product.ProductRequest;
 import com.iuh.printshop.printshop_be.dto.product.ProductResponse;
+import com.iuh.printshop.printshop_be.dto.product.ProductSearchRequest;
 import com.iuh.printshop.printshop_be.entity.Brand;
 import com.iuh.printshop.printshop_be.entity.Category;
 import com.iuh.printshop.printshop_be.entity.Product;
 import com.iuh.printshop.printshop_be.repository.BrandRepository;
 import com.iuh.printshop.printshop_be.repository.CategoryRepository;
 import com.iuh.printshop.printshop_be.repository.ProductRepository;
+import com.iuh.printshop.printshop_be.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -95,6 +103,68 @@ public class ProductService {
             return true;
         }
         return false;
+    }
+
+    public ProductPageResponse searchProducts(ProductSearchRequest request) {
+        // Build specification for filtering
+        Specification<Product> spec = ProductSpecification.searchProducts(
+            request.getKeyword(),
+            request.getCategoryId(),
+            request.getBrandId(),
+            request.getMinPrice(),
+            request.getMaxPrice()
+        );
+
+        // Build sort
+        Sort sort = buildSort(request.getSortBy());
+
+        // Build pagination
+        Pageable pageable = PageRequest.of(
+            request.getPage() != null ? request.getPage() : 0,
+            request.getSize() != null ? request.getSize() : 20,
+            sort
+        );
+
+        // Execute query
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+        // Convert to DTO
+        List<ProductResponse> content = productPage.getContent().stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+
+        return ProductPageResponse.builder()
+            .content(content)
+            .page(productPage.getNumber())
+            .size(productPage.getSize())
+            .totalElements(productPage.getTotalElements())
+            .totalPages(productPage.getTotalPages())
+            .first(productPage.isFirst())
+            .last(productPage.isLast())
+            .build();
+    }
+
+    private Sort buildSort(String sortBy) {
+        if (sortBy == null || sortBy.isEmpty()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt"); // Default: newest first
+        }
+
+        switch (sortBy.toLowerCase()) {
+            case "price_asc":
+                return Sort.by(Sort.Direction.ASC, "price");
+            case "price_desc":
+                return Sort.by(Sort.Direction.DESC, "price");
+            case "name_asc":
+                return Sort.by(Sort.Direction.ASC, "name");
+            case "name_desc":
+                return Sort.by(Sort.Direction.DESC, "name");
+            case "newest":
+                return Sort.by(Sort.Direction.DESC, "createdAt");
+            case "oldest":
+                return Sort.by(Sort.Direction.ASC, "createdAt");
+            default:
+                return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
     }
 
     private ProductResponse convertToDto(Product product) {
