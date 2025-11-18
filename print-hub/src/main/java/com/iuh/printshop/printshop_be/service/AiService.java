@@ -4,6 +4,7 @@ import com.iuh.printshop.printshop_be.dto.ai.ChatResponse;
 import com.iuh.printshop.printshop_be.entity.Product;
 import com.iuh.printshop.printshop_be.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiService {
@@ -24,40 +26,54 @@ public class AiService {
      * Xử lý input từ người dùng, phân tích và trả về response + sản phẩm gợi ý
      */
     public ChatResponse processUserInput(String input) {
-        // 1. Lấy tất cả sản phẩm từ database
-        List<Product> allProducts = productRepository.findAll();
+        try {
+            // 1. Lấy tất cả sản phẩm từ database
+            List<Product> allProducts = productRepository.findAll();
 
-        // 2. Xây dựng context về sản phẩm
-        String productContext = buildProductContext(allProducts);
+            // 2. Xây dựng context về sản phẩm
+            String productContext = buildProductContext(allProducts);
 
-        // 3. Xây dựng system prompt
-        String systemPrompt = "Bạn là một chuyên gia tư vấn máy in và máy scan chuyên nghiệp. " +
-                "Nhiệm vụ của bạn:\n" +
-                "1. TRẢ LỜI TRỰC TIẾP câu hỏi của khách hàng dựa trên danh sách sản phẩm có sẵn\n" +
-                "2. Đưa ra các sản phẩm phù hợp nhất với nhu cầu\n" +
-                "3. Trong câu trả lời, nếu đề cập đến sản phẩm cụ thể, hãy ghi rõ ID sản phẩm trong format: [PRODUCT_ID:xxx]\n" +
-                "4. Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp\n" +
-                "5. Ở cuối câu trả lời, nếu cần thêm thông tin để tư vấn tốt hơn, bạn có thể đặt câu hỏi (nhưng không bắt buộc)\n" +
-                "6. Ưu tiên trả lời trực tiếp và đưa ra sản phẩm gợi ý trước, câu hỏi tư vấn để sau";
+            // 3. Xây dựng system prompt
+            String systemPrompt = "Bạn là một chuyên gia tư vấn máy in và máy scan chuyên nghiệp. " +
+                    "Nhiệm vụ của bạn:\n" +
+                    "1. TRẢ LỜI TRỰC TIẾP câu hỏi của khách hàng dựa trên danh sách sản phẩm có sẵn\n" +
+                    "2. Đưa ra các sản phẩm phù hợp nhất với nhu cầu\n" +
+                    "3. Trong câu trả lời, nếu đề cập đến sản phẩm cụ thể, hãy ghi rõ ID sản phẩm trong format: [PRODUCT_ID:xxx]\n" +
+                    "4. Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp\n" +
+                    "5. Ở cuối câu trả lời, nếu cần thêm thông tin để tư vấn tốt hơn, bạn có thể đặt câu hỏi (nhưng không bắt buộc)\n" +
+                    "6. Ưu tiên trả lời trực tiếp và đưa ra sản phẩm gợi ý trước, câu hỏi tư vấn để sau";
 
-        // 4. Gọi AI với context
-        String fullPrompt = systemPrompt + "\n\n" + productContext + "\n\n" +
-                "CÂU HỎI CỦA KHÁCH HÀNG: " + input + "\n\n" +
-                "Hãy phân tích và đưa ra lời khuyên phù hợp cùng với các sản phẩm gợi ý.";
+            // 4. Gọi AI với context
+            String fullPrompt = systemPrompt + "\n\n" + productContext + "\n\n" +
+                    "CÂU HỎI CỦA KHÁCH HÀNG: " + input + "\n\n" +
+                    "Hãy phân tích và đưa ra lời khuyên phù hợp cùng với các sản phẩm gợi ý.";
 
-        String aiResponse = chatClient
-                .prompt()
-                .user(fullPrompt)
-                .call()
-                .content();
+            String aiResponse = chatClient
+                    .prompt()
+                    .user(fullPrompt)
+                    .call()
+                    .content();
 
-        // 5. Parse response để lấy product IDs
-        List<Integer> recommendedIds = extractProductIds(aiResponse, allProducts);
+            // 5. Parse response để lấy product IDs
+            List<Integer> recommendedIds = extractProductIds(aiResponse, allProducts);
 
-        return ChatResponse.builder()
-                .reply(aiResponse)
-                .recommendedProductIds(recommendedIds)
-                .build();
+            return ChatResponse.builder()
+                    .reply(aiResponse)
+                    .recommendedProductIds(recommendedIds)
+                    .build();
+        } catch (Exception e) {
+            log.error("Lỗi khi gọi AI service: {}", e.getMessage(), e);
+            
+            // Trả về response mặc định khi AI service lỗi
+            String errorMessage = "Xin lỗi, hiện tại dịch vụ tư vấn AI đang gặp sự cố. " +
+                    "Vui lòng thử lại sau hoặc liên hệ với chúng tôi để được hỗ trợ trực tiếp. " +
+                    "Bạn có thể xem danh sách sản phẩm để tìm kiếm thủ công.";
+            
+            return ChatResponse.builder()
+                    .reply(errorMessage)
+                    .recommendedProductIds(new ArrayList<>())
+                    .build();
+        }
     }
 
     /**
