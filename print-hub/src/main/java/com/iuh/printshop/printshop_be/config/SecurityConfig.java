@@ -28,7 +28,7 @@ import java.util.Arrays;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-public class SecurityConfig {
+public class    SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/categories/**").permitAll()
                         .requestMatchers("/api/brands/**").permitAll()
                         .requestMatchers("/api/cart/**").permitAll()
+                        .requestMatchers("/chat/**").permitAll() // AI Chat API - public access
                         .requestMatchers("/api/users/me/**").authenticated() // Profile APIs - user tự quản lý
                         .requestMatchers("/api/users/**").hasRole("ADMIN") // User management APIs - Admin only
                         .anyRequest().authenticated()

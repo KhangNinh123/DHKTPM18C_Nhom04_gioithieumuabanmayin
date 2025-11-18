@@ -4,6 +4,7 @@ import com.iuh.printshop.printshop_be.dto.product.ProductRequest;
 import com.iuh.printshop.printshop_be.dto.product.ProductResponse;
 import com.iuh.printshop.printshop_be.entity.Product;
 import com.iuh.printshop.printshop_be.service.ProductService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
+@Tag(name = "Products", description = "Product management APIs")
 public class ProductController {
     private final ProductService productService;
 
