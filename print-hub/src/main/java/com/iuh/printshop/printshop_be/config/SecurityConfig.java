@@ -52,8 +52,20 @@ public class    SecurityConfig {
                         .requestMatchers("/api/brands/**").permitAll()
                         .requestMatchers("/api/cart/**").permitAll()
                         .requestMatchers("/chat/**").permitAll() // AI Chat API - public access
+                        .requestMatchers("/api/reviews/product/**").permitAll() // Get reviews by product - public
+                        .requestMatchers("/api/reviews/**").authenticated() // Other review APIs - require authentication
                         .requestMatchers("/api/users/me/**").authenticated() // Profile APIs - user tự quản lý
                         .requestMatchers("/api/users/**").hasRole("ADMIN") // User management APIs - Admin only
+                        // Discount APIs - public endpoints first (must be before /** pattern)
+                        .requestMatchers("/api/discounts/apply").permitAll()
+                        .requestMatchers("/api/discounts/validate").permitAll()
+                        // Discount APIs - admin only for CRUD
+                        .requestMatchers("/api/discounts/**").hasRole("ADMIN")
+                        // Promotion APIs - public endpoints first (must be before /** pattern)
+                        .requestMatchers("/api/promotions/calculate").permitAll()
+                        .requestMatchers("/api/promotions/active").permitAll()
+                        // Promotion APIs - admin only for CRUD
+                        .requestMatchers("/api/promotions/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
