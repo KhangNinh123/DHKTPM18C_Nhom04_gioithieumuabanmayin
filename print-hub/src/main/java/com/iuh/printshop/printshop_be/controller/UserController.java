@@ -82,6 +82,20 @@ public class UserController {
         }
     }
 
+    @PutMapping("/{id}/roles")
+    @Operation(summary = "Update user roles", description = "Update roles of a user (Admin only)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> updateUserRoles(
+            @PathVariable Integer id,
+            @RequestParam Set<String> roles) {
+        try {
+            UserResponse response = userService.updateUserRoles(id, roles);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete user", description = "Delete user by ID (Admin only)")
     @PreAuthorize("hasRole('ADMIN')")

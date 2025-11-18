@@ -102,6 +102,25 @@ public class UserService implements UserDetailsService {
         return convertToUserResponse(savedUser);
     }
 
+    /**
+     * Cập nhật roles của user
+     */
+    @Transactional
+    public UserResponse updateUserRoles(Integer id, Set<String> roleNames) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        // Set roles
+        Set<Role> roles = roleNames.stream()
+                .map(roleName -> roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new RuntimeException("Role not found: " + roleName)))
+                .collect(Collectors.toSet());
+        user.setRoles(roles);
+
+        User savedUser = userRepository.save(user);
+        return convertToUserResponse(savedUser);
+    }
+
     @Transactional
     public void deleteUser(Integer id) {
         if (!userRepository.existsById(id)) {
