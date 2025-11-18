@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class WebhookResult {
-    public enum Status { PAID, FAILED, REFUNDED }
-    private String providerTxId;
-    private Status status;
+    private Long paymentId;
+    private String newStatus;
+    private String message;
 }

@@ -1,4 +1,10 @@
 package com.iuh.printshop.printshop_be.entity;
 
-
-public enum PaymentStatus { UNPAID, REQUIRES_ACTION, PAID, FAILED, REFUNDED, COD_PENDING }
+public enum PaymentStatus {
+    PENDING,       // trạng thái mặc định
+    PAID,          // đã thanh toán
+    FAILED,        // thất bại
+    REFUNDED,
+    COD_PENDING,
+    REQUIRES_ACTION, UNPAID
+}

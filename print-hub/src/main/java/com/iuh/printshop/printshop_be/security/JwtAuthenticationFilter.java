@@ -29,6 +29,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String path = request.getServletPath();
+
+        // ====== BYPASS CHO WEBHOOK MOCK ======
+        if (path.startsWith("/api/payments/webhook/mock")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // ====== BYPASS CHO AUTH ======
+        if (path.startsWith("/api/auth")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // ====== XỬ LÝ JWT BÌNH THƯỜNG ======
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
@@ -58,4 +73,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+
 }
