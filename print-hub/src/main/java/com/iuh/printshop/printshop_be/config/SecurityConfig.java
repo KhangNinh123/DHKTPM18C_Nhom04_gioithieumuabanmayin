@@ -51,8 +51,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/categories/**").permitAll()
                         .requestMatchers("/api/brands/**").permitAll()
                         .requestMatchers("/api/cart/**").permitAll()
-                        .requestMatchers("/api/users").hasRole("ADMIN")
-                        .requestMatchers("/api/order/**").permitAll()
+                        .requestMatchers("/api/users/me/**").authenticated() // Profile APIs - user tự quản lý
+                        .requestMatchers("/api/users/**").hasRole("ADMIN") // User management APIs - Admin only
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

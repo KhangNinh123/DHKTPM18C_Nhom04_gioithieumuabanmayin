@@ -1,5 +1,7 @@
 package com.iuh.printshop.printshop_be.service;
 
+import com.iuh.printshop.printshop_be.dto.user.ChangePasswordRequest;
+import com.iuh.printshop.printshop_be.dto.user.UpdateProfileRequest;
 import com.iuh.printshop.printshop_be.dto.user.UserResponse;
 import com.iuh.printshop.printshop_be.entity.Role;
 import com.iuh.printshop.printshop_be.entity.User;
@@ -7,6 +9,8 @@ import com.iuh.printshop.printshop_be.repository.RoleRepository;
 import com.iuh.printshop.printshop_be.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -104,6 +108,74 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("User not found with id: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    /**
+     * Lấy user hiện tại từ SecurityContext (JWT token)
+     */
+    @Transactional(readOnly = true)
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        String email = authentication.getName();
+        return userRepository.findByEmailWithRoles(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    /**
+     * Lấy thông tin profile của user hiện tại
+     */
+    @Transactional(readOnly = true)
+    public UserResponse getCurrentUserProfile() {
+        User user = getCurrentUser();
+        return convertToUserResponse(user);
+    }
+
+    /**
+     * Cập nhật profile của user hiện tại
+     */
+    @Transactional
+    public UserResponse updateProfile(UpdateProfileRequest request) {
+        User user = getCurrentUser();
+
+        // Cập nhật các field nếu có
+        if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+            user.setFullName(request.getFullName().trim());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone().trim());
+        }
+        if (request.getDefaultAddress() != null) {
+            user.setDefaultAddress(request.getDefaultAddress().trim());
+        }
+
+        User savedUser = userRepository.save(user);
+        return convertToUserResponse(savedUser);
+    }
+
+    /**
+     * Đổi mật khẩu của user hiện tại
+     */
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User user = getCurrentUser();
+
+        // Kiểm tra mật khẩu hiện tại
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Mật khẩu hiện tại không đúng");
+        }
+
+        // Kiểm tra mật khẩu mới không trùng với mật khẩu cũ
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Mật khẩu mới phải khác mật khẩu hiện tại");
+        }
+
+        // Cập nhật mật khẩu mới
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     private UserResponse convertToUserResponse(User user) {
