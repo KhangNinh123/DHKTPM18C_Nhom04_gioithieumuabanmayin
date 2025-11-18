@@ -3,8 +3,10 @@ package com.iuh.printshop.printshop_be.service;
 import com.iuh.printshop.printshop_be.dto.auth.AuthResponse;
 import com.iuh.printshop.printshop_be.dto.auth.LoginRequest;
 import com.iuh.printshop.printshop_be.dto.auth.RegisterRequest;
+import com.iuh.printshop.printshop_be.entity.OtpVerification;
 import com.iuh.printshop.printshop_be.entity.Role;
 import com.iuh.printshop.printshop_be.entity.User;
+import com.iuh.printshop.printshop_be.repository.OtpVerificationRepository;
 import com.iuh.printshop.printshop_be.repository.RoleRepository;
 import com.iuh.printshop.printshop_be.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -27,15 +30,32 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final OtpVerificationRepository otpVerificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
     
     private final Random random = new Random();
+    private static final int OTP_EXPIRATION_MINUTES = 10;
     
     private String generateOtpCode() {
         return String.format("%06d", random.nextInt(1000000));
+    }
+    
+    private void saveOtpVerification(String email, String otpCode) {
+        // Invalidate all previous OTPs for this email
+        otpVerificationRepository.invalidateAllOtpsForEmail(email);
+        
+        // Create new OTP verification
+        OtpVerification otpVerification = OtpVerification.builder()
+                .email(email)
+                .otpCode(otpCode)
+                .expiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRATION_MINUTES))
+                .isUsed(false)
+                .build();
+        
+        otpVerificationRepository.save(otpVerification);
     }
 
     @Transactional
@@ -63,8 +83,9 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // Generate OTP và gửi email (không lưu vào database)
+        // Generate OTP, lưu vào database và gửi email
         String otpCode = generateOtpCode();
+        saveOtpVerification(request.getEmail(), otpCode);
         emailService.sendVerificationEmail(request.getEmail(), otpCode);
 
         // Return response without JWT token (user needs to verify OTP first)
@@ -152,14 +173,38 @@ public class AuthService {
     public boolean verifyEmailWithOtp(String email, String otpCode) {
         // Find user by email
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
 
-        // Kiểm tra đơn giản: nếu OTP có 6 chữ số thì cho phép kích hoạt
-        if (otpCode == null || otpCode.length() != 6 || !otpCode.matches("\\d{6}")) {
-            throw new RuntimeException("Mã OTP không hợp lệ");
+        // Check if account is already activated
+        if (user.getIsActive()) {
+            throw new RuntimeException("Tài khoản đã được kích hoạt");
         }
 
-        // Kích hoạt tài khoản: chỉ cần is_active = true
+        // Validate OTP format
+        if (otpCode == null || otpCode.length() != 6 || !otpCode.matches("\\d{6}")) {
+            throw new RuntimeException("Mã OTP không hợp lệ. Mã OTP phải có 6 chữ số.");
+        }
+
+        // Find OTP verification
+        OtpVerification otpVerification = otpVerificationRepository
+                .findByEmailAndOtpCodeAndIsUsedFalse(email, otpCode)
+                .orElseThrow(() -> new RuntimeException("Mã OTP không đúng hoặc đã được sử dụng"));
+
+        // Check if OTP is expired
+        if (otpVerification.isExpired()) {
+            throw new RuntimeException("Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.");
+        }
+
+        // Check if OTP is already used
+        if (otpVerification.getIsUsed()) {
+            throw new RuntimeException("Mã OTP đã được sử dụng");
+        }
+
+        // Mark OTP as used
+        otpVerification.setIsUsed(true);
+        otpVerificationRepository.save(otpVerification);
+
+        // Activate user account
         user.setIsActive(true);
         userRepository.save(user);
 
@@ -175,8 +220,9 @@ public class AuthService {
             throw new RuntimeException("Tài khoản đã được kích hoạt");
         }
 
-        // Generate new OTP và gửi email (không lưu vào database)
+        // Generate new OTP, save to database and send email
         String otpCode = generateOtpCode();
+        saveOtpVerification(email, otpCode);
         emailService.sendVerificationEmail(email, otpCode);
     }
     

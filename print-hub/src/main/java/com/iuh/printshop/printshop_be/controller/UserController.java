@@ -1,5 +1,7 @@
 package com.iuh.printshop.printshop_be.controller;
 
+import com.iuh.printshop.printshop_be.dto.user.ChangePasswordRequest;
+import com.iuh.printshop.printshop_be.dto.user.UpdateProfileRequest;
 import com.iuh.printshop.printshop_be.dto.user.UserResponse;
 import com.iuh.printshop.printshop_be.entity.User;
 import com.iuh.printshop.printshop_be.service.UserService;
@@ -89,6 +91,41 @@ public class UserController {
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // ========== Profile APIs (User tự quản lý) ==========
+
+    @GetMapping("/me")
+    @Operation(summary = "Get current user profile", description = "Get profile information of the authenticated user")
+    public ResponseEntity<UserResponse> getCurrentUserProfile() {
+        try {
+            UserResponse user = userService.getCurrentUserProfile();
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Update current user profile", description = "Update profile information of the authenticated user")
+    public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        try {
+            UserResponse response = userService.updateProfile(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    @PutMapping("/me/password")
+    @Operation(summary = "Change password", description = "Change password of the authenticated user")
+    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            userService.changePassword(request);
+            return ResponseEntity.ok("Đổi mật khẩu thành công");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

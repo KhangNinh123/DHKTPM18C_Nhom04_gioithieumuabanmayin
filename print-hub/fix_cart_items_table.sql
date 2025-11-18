@@ -1,4 +1,4 @@
-usersorders-- Fix cart_items and carts table structure
+-- Fix cart_items and carts table structure
 USE printshop;
 
 -- Drop the existing tables if they exist with incorrect structure
