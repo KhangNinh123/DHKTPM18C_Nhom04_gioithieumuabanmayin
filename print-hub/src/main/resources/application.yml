@@ -37,7 +37,9 @@ spring:
       chat: google-genai
     google:
       genai:
-        api-key: ${GEMINI_API_KEY:AIzaSyACM5Cx5Li29VuT1WjgYW3wOJpL954dxrk}
+        # ⚠️ CẢNH BÁO: API key trong file này chỉ dùng cho development
+        # Trong production, nên sử dụng environment variable: ${GEMINI_API_KEY}
+        api-key: ${GEMINI_API_KEY}
         chat:
           options:
             model: gemini-2.0-flash
