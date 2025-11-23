@@ -88,7 +88,7 @@ public class Promotion {
 
     public enum DiscountType {
         PERCENTAGE,
-        FIXED_AMOUNT
+        FIXED
     }
 }
 

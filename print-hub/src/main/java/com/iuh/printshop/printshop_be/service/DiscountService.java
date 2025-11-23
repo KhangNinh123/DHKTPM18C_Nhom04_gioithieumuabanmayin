@@ -28,6 +28,8 @@ public class DiscountService {
             throw new RuntimeException("Discount code already exists: " + request.getCode());
         }
 
+        validateDiscountRequest(request);
+
         Discount discount = Discount.builder()
                 .code(request.getCode())
                 .description(request.getDescription())
@@ -67,6 +69,8 @@ public class DiscountService {
                     throw new RuntimeException("Discount code already exists: " + request.getCode());
                 }
             }
+
+            validateDiscountRequest(request);
 
             discount.setCode(request.getCode());
             discount.setDescription(request.getDescription());
@@ -199,6 +203,17 @@ public class DiscountService {
                 .createdAt(discount.getCreatedAt())
                 .updatedAt(discount.getUpdatedAt())
                 .build();
+    }
+
+    private void validateDiscountRequest(DiscountRequest request) {
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            throw new RuntimeException("End date must be after start date");
+        }
+
+        if (request.getDiscountType() == Discount.DiscountType.PERCENTAGE
+                && request.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new RuntimeException("Percentage discount cannot exceed 100%");
+        }
     }
 }
 

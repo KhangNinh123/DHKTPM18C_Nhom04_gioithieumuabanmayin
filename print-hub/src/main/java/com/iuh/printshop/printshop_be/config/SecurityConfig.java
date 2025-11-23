@@ -17,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -48,24 +49,25 @@ public class    SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
-                        .requestMatchers("/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers("/api/categories/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/brands/**").permitAll()
                         .requestMatchers("/api/cart/**").permitAll()
                         .requestMatchers("/chat/**").permitAll() // AI Chat API - public access
                         .requestMatchers("/api/reviews/product/**").permitAll() // Get reviews by product - public
                         .requestMatchers("/api/reviews/**").authenticated() // Other review APIs - require authentication
                         .requestMatchers("/api/users/me/**").authenticated() // Profile APIs - user tự quản lý
-                        .requestMatchers("/api/users/**").hasRole("ADMIN") // User management APIs - Admin only
-                        // Discount APIs - public endpoints first (must be before /** pattern)
-                        .requestMatchers("/api/discounts/apply").permitAll()
-                        .requestMatchers("/api/discounts/validate").permitAll()
+                        .requestMatchers("/api/users/**").hasAuthority("ROLE_ADMIN") // User management APIs - Admin only
+                        // Discount APIs - customer endpoints first (must be before /** pattern)
+                        .requestMatchers("/api/discounts/apply").hasAuthority("ROLE_CUSTOMER")
+                        .requestMatchers("/api/discounts/validate").hasAuthority("ROLE_CUSTOMER")
                         // Discount APIs - admin only for CRUD
-                        .requestMatchers("/api/discounts/**").hasRole("ADMIN")
-                        // Promotion APIs - public endpoints first (must be before /** pattern)
-                        .requestMatchers("/api/promotions/calculate").permitAll()
-                        .requestMatchers("/api/promotions/active").permitAll()
+                        .requestMatchers("/api/discounts/**").hasAuthority("ROLE_ADMIN")
+                        // Promotion APIs - customer endpoints first (must be before /** pattern)
+                        .requestMatchers("/api/promotions/calculate").hasAuthority("ROLE_CUSTOMER")
+                        .requestMatchers("/api/promotions/active").hasAuthority("ROLE_CUSTOMER")
                         // Promotion APIs - admin only for CRUD
-                        .requestMatchers("/api/promotions/**").hasRole("ADMIN")
+                        .requestMatchers("/api/promotions/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

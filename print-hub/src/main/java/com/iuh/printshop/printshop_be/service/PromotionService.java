@@ -30,6 +30,7 @@ public class PromotionService {
     private final ProductRepository productRepository;
 
     public PromotionResponse createPromotion(PromotionRequest request) {
+        validatePromotionRequest(request);
         Promotion promotion = Promotion.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -86,6 +87,7 @@ public class PromotionService {
 
     public Optional<PromotionResponse> updatePromotion(Integer id, PromotionRequest request) {
         return promotionRepository.findById(id).map(promotion -> {
+            validatePromotionRequest(request);
             promotion.setName(request.getName());
             promotion.setDescription(request.getDescription());
             promotion.setDiscountType(request.getDiscountType());
@@ -287,6 +289,17 @@ public class PromotionService {
                 .createdAt(promotion.getCreatedAt())
                 .updatedAt(promotion.getUpdatedAt())
                 .build();
+    }
+
+    private void validatePromotionRequest(PromotionRequest request) {
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            throw new RuntimeException("End date must be after start date");
+        }
+
+        if (request.getDiscountType() == Promotion.DiscountType.PERCENTAGE
+                && request.getDiscountValue().compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new RuntimeException("Percentage discount cannot exceed 100%");
+        }
     }
 }
 

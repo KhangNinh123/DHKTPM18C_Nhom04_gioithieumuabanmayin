@@ -14,6 +14,10 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     public Category createCategory(Category category) {
+        categoryRepository.findByName(category.getName()).ifPresent(existing -> {
+            throw new RuntimeException("Category name already exists: " + category.getName());
+        });
+
         return categoryRepository.save(category);
     }
 
@@ -27,6 +31,12 @@ public class CategoryService {
 
     public Optional<Category> updateCategory(Integer id, Category updatedCategory) {
         return categoryRepository.findById(id).map(category -> {
+            categoryRepository.findByName(updatedCategory.getName()).ifPresent(existing -> {
+                if (!existing.getId().equals(id)) {
+                    throw new RuntimeException("Category name already exists: " + updatedCategory.getName());
+                }
+            });
+
             category.setName(updatedCategory.getName());
             category.setDescription(updatedCategory.getDescription());
             return categoryRepository.save(category);
