@@ -5,26 +5,43 @@ import com.iuh.printshop.printshop_be.service.BrandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/brands")
 @RequiredArgsConstructor
 public class BrandController {
+
     private final BrandService brandService;
 
     @PostMapping
-    public ResponseEntity<Brand> createBrand(@RequestBody Brand brand) {
-        Brand savedBrand = brandService.createBrand(brand);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedBrand);
+    public ResponseEntity<?> createBrand(@Valid @RequestBody Brand brand, BindingResult br) {
+
+        if (br.hasErrors()) {
+            return ResponseEntity.badRequest().body(getValidationErrors(br));
+        }
+
+        try {
+            Brand savedBrand = brandService.createBrand(brand);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedBrand);
+
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("errors", Map.of("name", ex.getMessage()))
+            );
+        }
     }
 
     @GetMapping
     public ResponseEntity<List<Brand>> getAllBrands() {
-        List<Brand> brands = brandService.getAllBrands();
-        return ResponseEntity.ok(brands);
+        return ResponseEntity.ok(brandService.getAllBrands());
     }
 
     @GetMapping("/{id}")
@@ -35,7 +52,15 @@ public class BrandController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Brand> updateBrand(@PathVariable Integer id, @RequestBody Brand brand) {
+    public ResponseEntity<?> updateBrand(@PathVariable Integer id,
+                                         @Valid @RequestBody Brand brand,
+                                         BindingResult bindingResult) {
+
+        // Validation lỗi → trả về JSON error
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(getValidationErrors(bindingResult));
+        }
+
         return brandService.updateBrand(id, brand)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -48,5 +73,17 @@ public class BrandController {
         }
         return ResponseEntity.notFound().build();
     }
-}
 
+    private Map<String, Object> getValidationErrors(BindingResult bindingResult) {
+        Map<String, String> fieldErrors = new HashMap<>();
+
+        for (FieldError error : bindingResult.getFieldErrors()) {
+            fieldErrors.put(error.getField(), error.getDefaultMessage());
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("errors", fieldErrors);
+
+        return response;
+    }
+}

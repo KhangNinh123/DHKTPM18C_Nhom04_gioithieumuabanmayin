@@ -3,6 +3,7 @@ package com.iuh.printshop.printshop_be.service;
 import com.iuh.printshop.printshop_be.entity.Brand;
 import com.iuh.printshop.printshop_be.repository.BrandRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,9 +15,15 @@ public class BrandService {
     private final BrandRepository brandRepository;
 
     public Brand createBrand(Brand brand) {
-        return brandRepository.save(brand);
+        try {
+            return brandRepository.save(brand);
+        } catch (DataIntegrityViolationException ex) {
+            if (ex.getMessage().contains("Duplicate entry")) {
+                throw new RuntimeException("Tên thương hiệu đã tồn tại");
+            }
+            throw ex;
+        }
     }
-
     public List<Brand> getAllBrands() {
         return brandRepository.findAll();
     }
