@@ -1,8 +1,8 @@
 package com.iuh.printshop.printshop_be.service;
 
-import com.iuh.printshop.printshop_be.dto.payment.CheckoutInitResponse;
-import com.iuh.printshop.printshop_be.dto.payment.CheckoutRequest;
+import com.iuh.printshop.printshop_be.dto.checkout.CheckoutRequest;
+import com.iuh.printshop.printshop_be.dto.checkout.CheckoutResponse;
 
 public interface CheckoutService {
-    CheckoutInitResponse checkout(Integer userId, CheckoutRequest request);
+    CheckoutResponse createOrder(Integer userId, CheckoutRequest request);
 }

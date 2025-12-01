@@ -1,24 +1,16 @@
 package com.iuh.printshop.printshop_be.service.impl;
 
-import com.iuh.printshop.printshop_be.entity.Cart;
-import com.iuh.printshop.printshop_be.entity.CartItem;
-import com.iuh.printshop.printshop_be.repository.CartRepository;
-import com.iuh.printshop.printshop_be.dto.payment.CheckoutInitResponse;
-import com.iuh.printshop.printshop_be.dto.payment.CheckoutRequest;
-import com.iuh.printshop.printshop_be.dto.payment.InitPaymentResult;
+import com.iuh.printshop.printshop_be.dto.checkout.CheckoutRequest;
+import com.iuh.printshop.printshop_be.dto.checkout.CheckoutResponse;
 import com.iuh.printshop.printshop_be.entity.*;
-import com.iuh.printshop.printshop_be.repository.OrderRepository;
-import com.iuh.printshop.printshop_be.repository.PaymentRepository;
+import com.iuh.printshop.printshop_be.repository.*;
 import com.iuh.printshop.printshop_be.service.CheckoutService;
-import com.iuh.printshop.printshop_be.service.PaymentGateway;
-import jakarta.persistence.EntityNotFoundException;
+import com.iuh.printshop.printshop_be.vnpay.VnpayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,66 +18,60 @@ public class CheckoutServiceImpl implements CheckoutService {
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
-    private final PaymentRepository paymentRepository;
-    private final Map<PaymentMethod, PaymentGateway> paymentGateways;
+    private final OrderItemRepository orderItemRepository;
+    private final VnpayService vnpayService;
+    private final CartItemRepository cartItemRepository;
 
-    @Transactional
     @Override
-    public CheckoutInitResponse checkout(Integer userId, CheckoutRequest request) {
-        Cart cart = cartRepository.findByUser(User.builder().id(userId).build())
-                .orElseThrow(() -> new EntityNotFoundException("Cart not found for user=" + userId));
-        if (cart.getItems() == null || cart.getItems().isEmpty()) {
-            throw new IllegalStateException("Cart is empty");
-        }
+    public CheckoutResponse createOrder(Integer userId, CheckoutRequest req) {
 
-        // Snapshot Cart -> Order
+        Cart cart = cartRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Giỏ hàng trống"));
+
+        if (cart.getItems().isEmpty())
+            throw new RuntimeException("Giỏ hàng không có sản phẩm");
+
+// 1. Tạo Order
         Order order = new Order();
+        order.setCode("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         order.setUser(cart.getUser());
-        order.setStatus(OrderStatus.PENDING);
+        order.setFullName(req.getFullName());
+        order.setPhone(req.getPhone());
+        order.setShippingAddress(req.getShippingAddress());
+        order.setPaymentMethod(PaymentMethod.valueOf(req.getPaymentMethod()));
 
-        List<OrderItem> snapshot = new ArrayList<>();
+// 2. Order items (KHÔNG DÙNG LAMBDA)
         for (CartItem ci : cart.getItems()) {
             OrderItem oi = OrderItem.builder()
-                    .order(order)
                     .product(ci.getProduct())
                     .quantity(ci.getQuantity())
                     .unitPrice(ci.getPriceAtAdd())
-                    .id(new OrderItemId(order.getId().longValue(), ci.getProduct().getId()))
                     .build();
-            snapshot.add(oi);
+
+            order.addItem(oi); // Tự set order vào oi
         }
-        order.setItems(snapshot);
+
+// 3. Tính tổng
         order.recalcTotal();
+
+// 4. Lưu vào DB
         order = orderRepository.save(order);
 
-        // Create Payment
-        Payment payment = Payment.builder()
-                .order(order)
-                .method(request.getMethod())
-                .status(request.getMethod() == PaymentMethod.COD ? PaymentStatus.COD_PENDING : PaymentStatus.UNPAID)
-                .amount(order.getTotal())
-                .currency(order.getCurrency())
-                .build();
 
-        // Init online gateway
-        if (request.getMethod() != PaymentMethod.COD) {
-            PaymentGateway gw = paymentGateways.get(request.getMethod());
-            if (gw == null) throw new IllegalArgumentException("No gateway for method=" + request.getMethod());
-            InitPaymentResult r = gw.initPayment(order, request.getSuccessUrl(), request.getCancelUrl());
-            payment.setProviderTransactionId(r.getProviderTxId());
-            payment.setCheckoutUrlOrClientSecret(r.getCheckoutUrlOrClientSecret());
-            if (r.isRequiresAction()) payment.setStatus(PaymentStatus.REQUIRES_ACTION);
+        // 2. Nếu COD → trả về luôn
+        CheckoutResponse res = new CheckoutResponse();
+        res.setOrderId(order.getId());
+        res.setOrderCode(order.getCode());
+
+        if (order.getPaymentMethod() == PaymentMethod.COD) {
+            res.setRedirectUrl(null);
+            return res;
         }
 
-        payment = paymentRepository.save(payment);
+        // 3. Nếu VNPAY → tạo redirect URL
+        String vnpUrl = vnpayService.createPaymentUrl(order);
+        res.setRedirectUrl(vnpUrl);
 
-        return CheckoutInitResponse.builder()
-                .orderId(order.getId())
-                .paymentId(payment.getId())
-                .method(payment.getMethod())
-                .status(payment.getStatus())
-                .paymentUrlOrClientSecret(payment.getCheckoutUrlOrClientSecret())
-                .amount(payment.getAmount())
-                .build();
+        return res;
     }
 }

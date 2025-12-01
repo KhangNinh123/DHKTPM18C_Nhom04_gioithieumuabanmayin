@@ -160,4 +160,9 @@ public class CartServiceImpl implements CartService {
         cart.recalcTotal();
         return toResponse(cartRepository.save(cart));
     }
+
+    @Override
+    public void clearCart(Integer id) {
+
+    }
 }
