@@ -28,54 +28,65 @@ import java.util.Arrays;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-public class    SecurityConfig {
+public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
-    private final PasswordEncoder passwordEncoder; // Inject từ ApplicationConfig
+    private final PasswordEncoder passwordEncoder;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService, (com.iuh.printshop.printshop_be.service.UserService) userDetailsService);
+        return new JwtAuthenticationFilter(
+                jwtService,
+                (com.iuh.printshop.printshop_be.service.UserService) userDetailsService
+        );
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/api/products/**").permitAll()
-                        .requestMatchers("/api/categories/**").permitAll()
-                        .requestMatchers("/api/brands/**").permitAll()
-                        .requestMatchers("/api/cart/**").permitAll()
-                        .requestMatchers("/chat/**").permitAll() // AI Chat API - public access
-                        .requestMatchers("/api/reviews/product/**").permitAll() // Get reviews by product - public
-                        .requestMatchers("/api/reviews/**").authenticated() // Other review APIs - require authentication
-                        .requestMatchers("/api/users/me/**").authenticated() // Profile APIs - user tự quản lý
-                        .requestMatchers("/api/users/**").hasRole("ADMIN") // User management APIs - Admin only
-                        // Discount APIs - public endpoints first (must be before /** pattern)
-                        .requestMatchers("/api/discounts/apply").permitAll()
-                        .requestMatchers("/api/discounts/validate").permitAll()
-                        // Discount APIs - admin only for CRUD
-                        .requestMatchers("/api/discounts/**").hasRole("ADMIN")
-                        // Promotion APIs - public endpoints first (must be before /** pattern)
-                        .requestMatchers("/api/promotions/calculate").permitAll()
-                        .requestMatchers("/api/promotions/active").permitAll()
-                        // Promotion APIs - admin only for CRUD
-                        .requestMatchers("/api/promotions/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
+
+                        // ⭐ PUBLIC
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/products/**",
+                                "/api/categories/**",
+                                "/api/brands/**",
+                                "/chat/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/api/reviews/product/**"
+                        ).permitAll()
+
+                        // ⭐⭐⭐ TRACK ORDER PUBLIC — MATCH FULLY
+                        .requestMatchers("/api/orders/track/**", "/api/orders/track").permitAll()
+
+                        // ⭐ PRIVATE
+                        .requestMatchers("/api/users/me/**").authenticated()
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                        .requestMatchers("/api/reviews/**").authenticated()
+                        .requestMatchers("/api/discounts/**").authenticated()
+                        .requestMatchers("/api/promotions/**").authenticated()
+
+                        // ⭐ Other orders APIs -> authenticated
+                        .requestMatchers("/api/orders/**").authenticated()
+
+                        // ⭐ Cuối cùng (áp dụng cho URL không thuộc API)
+                        .anyRequest().permitAll()
                 )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -92,10 +103,10 @@ public class    SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder);
-        return authProvider;
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
     }
 
     @Bean
