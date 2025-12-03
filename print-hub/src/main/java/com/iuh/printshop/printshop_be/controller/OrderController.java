@@ -86,5 +86,10 @@ public class OrderController {
         List<OrderResponse> orders = orderService.getAllOrders();
         return ResponseEntity.ok(orders);
     }
+    @GetMapping("/track")
+    public ResponseEntity<OrderResponse> trackOrder(@RequestParam String code) {
+        return ResponseEntity.ok(orderService.trackOrder(code));
+    }
+
 }
 
