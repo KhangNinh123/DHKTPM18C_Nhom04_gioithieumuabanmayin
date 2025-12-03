@@ -241,5 +241,11 @@ public class OrderService {
                 .items(itemResponses)
                 .build();
     }
+    public OrderResponse trackOrder(String code) {
+        Order order = orderRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng với mã: " + code));
+        return mapToResponse(order);
+    }
+
 }
 
