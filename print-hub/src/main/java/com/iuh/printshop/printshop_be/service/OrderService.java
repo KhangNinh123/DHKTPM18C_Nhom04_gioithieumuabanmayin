@@ -243,9 +243,10 @@ public class OrderService {
     }
     public OrderResponse trackOrder(String code) {
         Order order = orderRepository.findByCode(code)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng với mã: " + code));
+                .orElseThrow(() -> new RuntimeException("Order not found"));
         return mapToResponse(order);
     }
+
 
 }
 
