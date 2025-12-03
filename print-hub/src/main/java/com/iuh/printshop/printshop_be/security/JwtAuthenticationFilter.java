@@ -24,31 +24,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
 
-    // Danh sách các đường dẫn public sẽ được bỏ qua bởi filter này
+    // ⭐ CHUẨN HÓA TẤT CẢ PUBLIC PATHS
     private final List<String> publicPaths = Arrays.asList(
-            "/api/auth/",
-            "/api/products/",
-            "/api/categories/",
-            "/api/brands/",
-            "/api/reviews/product/",
-            "/chat/",
-            "/swagger-ui",
-            "/v3/api-docs"
+            "/api/auth", "/api/auth/",
+            "/api/products", "/api/products/",
+            "/api/categories", "/api/categories/",
+            "/api/brands", "/api/brands/",
+            "/api/reviews/product", "/api/reviews/product/",
+            "/chat", "/chat/",
+
+            // ⭐⭐⭐ ORDER TRACKING
+            "/api/orders/track", "/api/orders/track/"
     );
 
-    /**
-     * Quyết định xem có nên bỏ qua filter này cho request hiện tại không.
-     * @return true nếu đường dẫn là public, false nếu cần kiểm tra JWT.
-     */
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
+        System.out.println("🔥 FILTER CHECK PATH = " + path);
+
+        // ⭐ Check startsWith để match tất cả path con
         return publicPaths.stream().anyMatch(path::startsWith);
     }
 
-    /**
-     * Logic filter này CHỈ chạy cho các endpoint private (cần xác thực).
-     */
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -58,8 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // Không có token → để filter chain xử lý => đúng với authenticated endpoints
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // Đối với endpoint private, không có token là lỗi -> để filter chain xử lý và trả về 401/403
             filterChain.doFilter(request, response);
             return;
         }
@@ -72,18 +69,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userService.loadUserByUsername(userEmail);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities()
+                            );
+
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+
         } catch (Exception e) {
-            // Nếu có lỗi khi parse JWT (token hết hạn, sai chữ ký...),
-            // xóa context để đảm bảo không có thông tin xác thực nào được thiết lập.
+            // Nếu token sai hoặc hết hạn → xóa context
             SecurityContextHolder.clearContext();
         }
 
