@@ -10,10 +10,15 @@ import com.iuh.printshop.printshop_be.entity.*;
 import com.iuh.printshop.printshop_be.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -240,6 +245,39 @@ public class OrderService {
                 .createdAt(order.getCreatedAt())
                 .items(itemResponses)
                 .build();
+    }
+
+    public Page<OrderResponse> searchOrdersAdmin(
+            String keyword,
+            Order.OrderStatus status,
+            Order.PaymentStatus paymentStatus,
+            Order.PaymentMethod paymentMethod,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        String k = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+
+        Page<Order> orderPage = orderRepository.searchOrders(
+                k,
+                status,
+                paymentStatus,
+                paymentMethod,
+                fromDate,
+                toDate,
+                pageable
+        );
+
+        return orderPage.map(this::mapToResponse);
     }
 }
 

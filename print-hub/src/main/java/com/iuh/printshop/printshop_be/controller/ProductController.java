@@ -1,5 +1,8 @@
 package com.iuh.printshop.printshop_be.controller;
 
+import com.iuh.printshop.printshop_be.dto.ai.ChatResponse;
+import com.iuh.printshop.printshop_be.dto.product.*;
+import com.iuh.printshop.printshop_be.service.AiService;
 import com.iuh.printshop.printshop_be.dto.product.ProductRequest;
 import com.iuh.printshop.printshop_be.dto.product.ProductResponse;
 import com.iuh.printshop.printshop_be.entity.Product;
@@ -25,6 +28,7 @@ import java.util.List;
 @Tag(name = "Products", description = "Product management APIs")
 public class ProductController {
     private final ProductService productService;
+    private  final AiService aiService;
 
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(
@@ -71,6 +75,34 @@ public class ProductController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/admin/search")
+    public ResponseEntity<ProductPageResponse> searchProductsAdmin(
+            @RequestBody ProductSearchRequest request
+    ) {
+        ProductPageResponse result = productService.searchProducts(request);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/ai-search")
+    public ResponseEntity<AiProductSearchResponse> aiSearchProducts(
+            @RequestBody AiProductSearchRequest request
+    ) {
+
+        ChatResponse chatResponse = aiService.processUserInput(request.getQuery());
+
+
+        var products = productService.getProductsByIds(chatResponse.getRecommendedProductIds());
+
+
+        AiProductSearchResponse response = AiProductSearchResponse.builder()
+                .reply(chatResponse.getReply())
+                .recommendedIds(chatResponse.getRecommendedProductIds())
+                .products(products)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     //Phan trang

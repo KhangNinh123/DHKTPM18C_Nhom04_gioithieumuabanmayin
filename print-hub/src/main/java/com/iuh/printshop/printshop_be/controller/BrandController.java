@@ -3,6 +3,7 @@ package com.iuh.printshop.printshop_be.controller;
 import com.iuh.printshop.printshop_be.entity.Brand;
 import com.iuh.printshop.printshop_be.service.BrandService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +48,24 @@ public class BrandController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<Brand>> searchBrands(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir
+    ) {
+        Page<Brand> result = brandService.searchBrands(
+                keyword,
+                page,
+                size,
+                sortBy,
+                sortDir
+        );
+        return ResponseEntity.ok(result);
     }
 }
 

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -141,5 +142,32 @@ public class UserController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/search")
+    @Operation(
+            summary = "Search, filter and sort users (Admin)",
+            description = "Search users by keyword, filter by role & active status, with pagination & sorting"
+    )
+    public ResponseEntity<Page<UserResponse>> searchUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        Page<UserResponse> result = userService.searchUsersAdmin(
+                keyword,
+                role,
+                isActive,
+                page,
+                size,
+                sortBy,
+                sortDir
+        );
+        return ResponseEntity.ok(result);
     }
 }

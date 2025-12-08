@@ -188,6 +188,16 @@ public class ProductService {
                 .build();
     }
 
+    public List<ProductResponse> getProductsByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        return productRepository.findAllById(ids).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
 //    phan trang
     public Page<Product> getProducts(int page, int size){
         Pageable pageable = PageRequest.of(page, size);

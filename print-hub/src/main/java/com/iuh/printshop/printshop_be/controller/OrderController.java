@@ -2,16 +2,20 @@ package com.iuh.printshop.printshop_be.controller;
 
 import com.iuh.printshop.printshop_be.dto.order.OrderRequest;
 import com.iuh.printshop.printshop_be.dto.order.OrderResponse;
+import com.iuh.printshop.printshop_be.entity.Order;
 import com.iuh.printshop.printshop_be.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -85,6 +89,41 @@ public class OrderController {
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         List<OrderResponse> orders = orderService.getAllOrders();
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/admin/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Search & filter orders (Admin)",
+            description = "Search orders with filters, sort and pagination (Admin only)")
+    public ResponseEntity<Page<OrderResponse>> searchOrdersAdmin(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Order.OrderStatus status,
+            @RequestParam(required = false) Order.PaymentStatus paymentStatus,
+            @RequestParam(required = false) Order.PaymentMethod paymentMethod,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime toDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
+    ) {
+        Page<OrderResponse> result = orderService.searchOrdersAdmin(
+                keyword,
+                status,
+                paymentStatus,
+                paymentMethod,
+                fromDate,
+                toDate,
+                page,
+                size,
+                sortBy,
+                sortDir
+        );
+        return ResponseEntity.ok(result);
     }
 }
 

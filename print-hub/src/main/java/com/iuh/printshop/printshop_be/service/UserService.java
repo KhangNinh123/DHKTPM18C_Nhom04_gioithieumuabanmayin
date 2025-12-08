@@ -9,6 +9,10 @@ import com.iuh.printshop.printshop_be.repository.RoleRepository;
 import com.iuh.printshop.printshop_be.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -211,5 +215,46 @@ public class UserService implements UserDetailsService {
                 .map(Role::getName)
                 .collect(Collectors.toSet()));
         return response;
+    }
+
+    public Page<UserResponse> searchUsersAdmin(
+            String keyword,
+            String role,
+            Boolean isActive,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        String k = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+        String r = (role != null && !role.isBlank()) ? role.trim() : null;
+
+        Page<User> userPage = userRepository.searchUsers(k, r, isActive, pageable);
+
+        return userPage.map(this::toUserResponse);
+    }
+
+    private UserResponse toUserResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .defaultAddress(user.getDefaultAddress())
+                .isActive(user.getIsActive())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .roles(
+                        user.getRoles().stream()
+                                .map(Role::getName)
+                                .collect(Collectors.toSet())
+                )
+                .build();
     }
 }
