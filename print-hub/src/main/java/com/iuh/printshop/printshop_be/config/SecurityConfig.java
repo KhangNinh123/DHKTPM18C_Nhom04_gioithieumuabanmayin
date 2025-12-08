@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/webhook/mock").permitAll()
                         .requestMatchers("/api/payments/**").permitAll()
                         .requestMatchers("/api/users").hasRole("ADMIN")
+                        .requestMatchers("/api/vnpay/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

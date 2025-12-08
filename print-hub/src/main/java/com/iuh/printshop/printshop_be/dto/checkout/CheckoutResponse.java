@@ -9,4 +9,7 @@ public class CheckoutResponse {
 
     // null nếu COD
     private String redirectUrl;
+
+    public CheckoutResponse(Long id, String code, Object o) {
+    }
 }

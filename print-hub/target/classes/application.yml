@@ -38,18 +38,21 @@ file:
 
 jwt:
   secret: 123456789101234567891012345678910123456789101234567891012345678910
-  expiration: 86400000 # 24 hours in milliseconds
+  expiration: 86400000
   refresh-token:
-    expiration: 604800000 # 7 days in milliseconds
+    expiration: 604800000
 
 app:
   email:
     from: ${MAIL_FROM:noreply@printshop.com}
 
-vnpay:
-  tmnCode: TESTCODE123
-  hashSecret: TESTSECRET123
-  payUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-  returnUrl: http://localhost:8080/api/v1/checkout/vnpay-return
-  ipnUrl: http://localhost:8080/api/v1/checkout/vnpay-ipn
+# ============================
+# VNPay Sandbox Configuration
+# ============================
 
+vnpay:
+  tmnCode: R2A9HETV
+  hashSecret: 1PWAY5NNP74M2EPGESFX302ME9FX3QX2
+  payUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  returnUrl:  https://temptingly-spleeniest-latonia.ngrok-free.dev/api/vnpay/return
+  ipnUrl:  https://temptingly-spleeniest-latonia.ngrok-free.dev/api/vnpay/ipn
